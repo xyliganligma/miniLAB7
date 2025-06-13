@@ -1,0 +1,66 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score
+
+n_samples = 500
+seed = 30
+random_state = 170
+
+data_sets = [
+    datasets.make_circles(n_samples=n_samples, factor=0.5, noise=0.05, random_state=seed),
+    datasets.make_moons(n_samples=n_samples, noise=0.05, random_state=seed),
+    datasets.make_blobs(n_samples=n_samples, cluster_std=[1.0, 0.5], random_state=seed, centers=2),
+    datasets.make_blobs(n_samples=n_samples, random_state=random_state, centers=2),
+    datasets.make_blobs(n_samples=n_samples, random_state=seed, centers=2)
+]
+
+data_sets[3] = (np.dot(data_sets[3][0], [[0.6, -0.6], [-0.4, 0.8]]), data_sets[3][1])
+
+data_names = ['Circles', 'Moons', 'Varied', 'Aniso', 'Blobs']
+
+models = [
+    KNeighborsClassifier(n_neighbors=3),
+    LogisticRegression(max_iter=200),
+    SVC(kernel='rbf', C=1.0)
+]
+
+model_names = ['K-Nearest Neighbors', 'Logistic Regression', 'Support Vector Machine']
+
+fig, axes = plt.subplots(5, 3, figsize=(15, 25))
+
+for i, (x, y) in enumerate(data_sets):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
+    
+    temp_x = np.linspace(x[:, 0].min() - 1, x[:, 0].max() + 1, 100)
+    temp_y = np.linspace(x[:, 1].min() - 1, x[:, 1].max() + 1, 100)
+    xx, yy = np.meshgrid(temp_x, temp_y)
+    
+    for j, model in enumerate(models):
+        model.fit(x_train, y_train)
+        y_pred = model.predict(x_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        
+        Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
+        Z = Z.reshape(xx.shape)
+        
+        ax = axes[i, j]
+        ax.contourf(xx, yy, Z, alpha=0.3, cmap='bwr')
+        
+        markers = ['x', 'o']
+        for k in range(len(x_train)):
+            ax.scatter(x_train[k, 0], x_train[k, 1], marker=markers[y_train[k]], c='b')
+        for k in range(len(x_test)):
+            m = 'g' if y_test[k] == y_pred[k] else 'r'
+            ax.scatter(x_test[k, 0], x_test[k, 1], marker=markers[y_test[k]], c=m)
+        
+        ax.set_title(f'{data_names[i]} - {model_names[j]}')
+        ax.text(0.05, 0.95, f'Accuracy: {accuracy:.3f}', transform=ax.transAxes, 
+                fontsize=10, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.8))
+
+plt.tight_layout()
+plt.show()
